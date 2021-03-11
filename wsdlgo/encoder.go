@@ -47,6 +47,8 @@ type Encoder interface {
 	// SetLocalNamespace allows overriding of the Namespace in XMLName instead
 	// of the one specified in wsdl
 	SetLocalNamespace(namespace string)
+
+	SetNeedSoapTag(needSoapTag bool)
 }
 
 type goEncoder struct {
@@ -77,6 +79,7 @@ type goEncoder struct {
 	soapOps map[string]*wsdl.BindingOperation
 
 	// whether to add supporting types
+	needSoapTag       bool
 	needsDateType     bool
 	needsTimeType     bool
 	needsDateTimeType bool
@@ -115,6 +118,10 @@ func (ge *goEncoder) SetPackageName(name fmt.Stringer) {
 
 func (ge *goEncoder) SetClient(c *http.Client) {
 	ge.http = c
+}
+
+func (ge *goEncoder) SetNeedSoapTag(needSoapTag bool) {
+	ge.needSoapTag = needSoapTag
 }
 
 func gofmtPath() (string, error) {
@@ -843,7 +850,7 @@ func (ge *goEncoder) inputParams(op *wsdl.Operation) ([]*parameter, error) {
 	}
 
 	// TODO: I had to disable this for my use case - do other use cases still work with false?
-	return ge.genParams(req, false), nil
+	return ge.genParams(req, ge.needSoapTag), nil
 }
 
 // returns list of function output parameters plus error.
@@ -858,7 +865,7 @@ func (ge *goEncoder) outputParams(op *wsdl.Operation) ([]*parameter, error) {
 	if !ok {
 		return nil, fmt.Errorf("operation %q wants output message %q but it's not defined", op.Name, om)
 	}
-	return append(ge.genParams(resp, false), out[0]), nil
+	return append(ge.genParams(resp, ge.needSoapTag), out[0]), nil
 }
 
 var isGoKeyword = map[string]bool{

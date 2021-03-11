@@ -25,6 +25,7 @@ type options struct {
 	ClientCertFile string
 	ClientKeyFile  string
 	Version        bool
+	needSoapTag bool
 }
 
 func main() {
@@ -38,6 +39,7 @@ func main() {
 	flag.StringVar(&opts.ClientCertFile, "cert", opts.ClientCertFile, "use client TLS cert file")
 	flag.StringVar(&opts.ClientKeyFile, "key", opts.ClientKeyFile, "use client TLS key file")
 	flag.BoolVar(&opts.Version, "version", opts.Version, "show version and exit")
+	flag.BoolVar(&opts.needSoapTag, "nst", opts.Version, "need soap tag")
 	flag.Parse()
 	if opts.Version {
 		fmt.Printf("wsdl2go %s\n", version)
@@ -80,6 +82,7 @@ func codegen(w io.Writer, opts options, cli *http.Client) error {
 
 	enc := wsdlgo.NewEncoder(w)
 	enc.SetClient(cli)
+	enc.SetNeedSoapTag(opts.needSoapTag)
 	if opts.Package != "" {
 		enc.SetPackageName(wsdlgo.PackageName(opts.Package))
 	}
