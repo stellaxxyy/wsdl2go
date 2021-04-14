@@ -126,6 +126,7 @@ func doRoundTrip(c *Client, setHeaders func(*http.Request), in, out Message) err
 	if cli == nil {
 		cli = http.DefaultClient
 	}
+	//fmt.Printf("[DEBUG] Request body: %s\n",b.String())
 	r, err := http.NewRequest("POST", c.URL, &b)
 	if err != nil {
 		return err
@@ -138,9 +139,13 @@ func doRoundTrip(c *Client, setHeaders func(*http.Request), in, out Message) err
 	if c.Ctx != nil {
 		r = r.WithContext(c.Ctx)
 	}
+	//fmt.Printf("[DEBUG] Request URL: %s\n",r.URL)
+	//fmt.Printf("[DEBUG] Request Method: %s\n",r.Method)
+	//fmt.Printf("[DEBUG] Request Header: %s\n",r.Header)
 
 	resp, err := cli.Do(r)
 	if err != nil {
+		//fmt.Printf("[DEBUG] error: %s\n", err.Error())
 		return err
 	}
 	defer resp.Body.Close()
@@ -151,6 +156,7 @@ func doRoundTrip(c *Client, setHeaders func(*http.Request), in, out Message) err
 		// read only the first MiB of the body in error case
 		limReader := io.LimitReader(resp.Body, 1024*1024)
 		body, _ := ioutil.ReadAll(limReader)
+		//fmt.Printf("[DEBUG] http error: %s\n", string(body))
 		return &HTTPError{
 			StatusCode: resp.StatusCode,
 			Status:     resp.Status,
@@ -158,9 +164,20 @@ func doRoundTrip(c *Client, setHeaders func(*http.Request), in, out Message) err
 		}
 	}
 
+	//fmt.Printf("[DEBUG] Response Header: '%s'\n", resp.Header)
+	if resp.Header.Get("Content-Type") == "text/html" {
+		var xbuf bytes.Buffer
+		if _, err = xbuf.ReadFrom(resp.Body); err != nil {
+			return err
+		}
+		*out.(*string) = xbuf.String()
+		return nil
+	}
+
+
 	marshalStructure := struct {
 		XMLName xml.Name `xml:"Envelope"`
-		Body    Message
+		Body    Message `xml:"Body"`
 	}{Body: out}
 
 	decoder := xml.NewDecoder(resp.Body)
