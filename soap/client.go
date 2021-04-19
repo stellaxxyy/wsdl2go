@@ -126,7 +126,7 @@ func doRoundTrip(c *Client, setHeaders func(*http.Request), in, out Message) err
 	if cli == nil {
 		cli = http.DefaultClient
 	}
-	//fmt.Printf("[DEBUG] Request body: %s\n",b.String())
+	//fmt.Printf("[DEBUG] Request Body: %s\n",b.String())
 	r, err := http.NewRequest("POST", c.URL, &b)
 	if err != nil {
 		return err
@@ -165,22 +165,22 @@ func doRoundTrip(c *Client, setHeaders func(*http.Request), in, out Message) err
 	}
 
 	//fmt.Printf("[DEBUG] Response Header: '%s'\n", resp.Header)
-	if resp.Header.Get("Content-Type") == "text/html" {
-		var xbuf bytes.Buffer
-		if _, err = xbuf.ReadFrom(resp.Body); err != nil {
-			return err
-		}
-		*out.(*string) = xbuf.String()
+	var xbuf bytes.Buffer
+	if _, err = xbuf.ReadFrom(resp.Body); err != nil {
+		return err
+	}
+	//fmt.Printf("[DEBUG] Response Body:%s\n", xbuf.String())
+	if outMessage, ok := out.(*string); ok {
+		*outMessage = xbuf.String()
 		return nil
 	}
-
 
 	marshalStructure := struct {
 		XMLName xml.Name `xml:"Envelope"`
 		Body    Message `xml:"Body"`
 	}{Body: out}
 
-	decoder := xml.NewDecoder(resp.Body)
+	decoder := xml.NewDecoder(bytes.NewReader(xbuf.Bytes()))
 	decoder.CharsetReader = charset.NewReaderLabel
 	return decoder.Decode(&marshalStructure)
 }
