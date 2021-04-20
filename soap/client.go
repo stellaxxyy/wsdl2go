@@ -126,7 +126,7 @@ func doRoundTrip(c *Client, setHeaders func(*http.Request), in, out Message) err
 	if cli == nil {
 		cli = http.DefaultClient
 	}
-	//fmt.Printf("[DEBUG] Request Body: %s\n",b.String())
+	//fmt.Printf("[DEBUG] SOAP request body: %s\n",b.String())
 	r, err := http.NewRequest("POST", c.URL, &b)
 	if err != nil {
 		return err
@@ -139,9 +139,7 @@ func doRoundTrip(c *Client, setHeaders func(*http.Request), in, out Message) err
 	if c.Ctx != nil {
 		r = r.WithContext(c.Ctx)
 	}
-	//fmt.Printf("[DEBUG] Request URL: %s\n",r.URL)
-	//fmt.Printf("[DEBUG] Request Method: %s\n",r.Method)
-	//fmt.Printf("[DEBUG] Request Header: %s\n",r.Header)
+	fmt.Printf("[DEBUG] SOAP request url: %s, method: %s, header: %s\n",r.URL, r.Method, r.Header)
 
 	resp, err := cli.Do(r)
 	if err != nil {
@@ -156,7 +154,7 @@ func doRoundTrip(c *Client, setHeaders func(*http.Request), in, out Message) err
 		// read only the first MiB of the body in error case
 		limReader := io.LimitReader(resp.Body, 1024*1024)
 		body, _ := ioutil.ReadAll(limReader)
-		//fmt.Printf("[DEBUG] http error: %s\n", string(body))
+		fmt.Printf("[DEBUG] SOAP error: %s\n", string(body))
 		return &HTTPError{
 			StatusCode: resp.StatusCode,
 			Status:     resp.Status,
@@ -164,7 +162,7 @@ func doRoundTrip(c *Client, setHeaders func(*http.Request), in, out Message) err
 		}
 	}
 
-	//fmt.Printf("[DEBUG] Response Header: '%s'\n", resp.Header)
+	fmt.Printf("[DEBUG] SOAP response header: %s\n", resp.Header)
 	var xbuf bytes.Buffer
 	if _, err = xbuf.ReadFrom(resp.Body); err != nil {
 		return err
