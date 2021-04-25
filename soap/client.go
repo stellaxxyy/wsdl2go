@@ -6,12 +6,12 @@ import (
 	"context"
 	"encoding/xml"
 	"fmt"
+	"github.com/sirupsen/logrus"
+	"golang.org/x/net/html/charset"
 	"io"
 	"io/ioutil"
 	"net/http"
 	"reflect"
-
-	"golang.org/x/net/html/charset"
 )
 
 // XSINamespace is a link to the XML Schema instance namespace.
@@ -126,7 +126,7 @@ func doRoundTrip(c *Client, setHeaders func(*http.Request), in, out Message) err
 	if cli == nil {
 		cli = http.DefaultClient
 	}
-	//fmt.Printf("[DEBUG] SOAP request body: %s\n",b.String())
+
 	r, err := http.NewRequest("POST", c.URL, &b)
 	if err != nil {
 		return err
@@ -139,7 +139,8 @@ func doRoundTrip(c *Client, setHeaders func(*http.Request), in, out Message) err
 	if c.Ctx != nil {
 		r = r.WithContext(c.Ctx)
 	}
-	fmt.Printf("[DEBUG] SOAP request url: %s, method: %s, header: %s\n",r.URL, r.Method, r.Header)
+	logrus.Debugf("SOAP request url: %s, method: %s, header: %s", r.URL, r.Method, r.Header)
+	logrus.Debugf("SOAP request body: %s", b.String())
 
 	resp, err := cli.Do(r)
 	if err != nil {
@@ -154,7 +155,7 @@ func doRoundTrip(c *Client, setHeaders func(*http.Request), in, out Message) err
 		// read only the first MiB of the body in error case
 		limReader := io.LimitReader(resp.Body, 1024*1024)
 		body, _ := ioutil.ReadAll(limReader)
-		fmt.Printf("[DEBUG] SOAP error: %s\n", string(body))
+		logrus.Errorf("SOAP error: %s", string(body))
 		return &HTTPError{
 			StatusCode: resp.StatusCode,
 			Status:     resp.Status,
@@ -162,12 +163,13 @@ func doRoundTrip(c *Client, setHeaders func(*http.Request), in, out Message) err
 		}
 	}
 
-	fmt.Printf("[DEBUG] SOAP response header: %s\n", resp.Header)
+	logrus.Debugf("SOAP response header: %s", resp.Header)
 	var xbuf bytes.Buffer
 	if _, err = xbuf.ReadFrom(resp.Body); err != nil {
 		return err
 	}
-	//fmt.Printf("[DEBUG] Response Body:%s\n", xbuf.String())
+
+	logrus.Debugf("SOAP response body:%s", xbuf.String())
 	if outMessage, ok := out.(*string); ok {
 		*outMessage = xbuf.String()
 		return nil
@@ -175,7 +177,7 @@ func doRoundTrip(c *Client, setHeaders func(*http.Request), in, out Message) err
 
 	marshalStructure := struct {
 		XMLName xml.Name `xml:"Envelope"`
-		Body    Message `xml:"Body"`
+		Body    Message  `xml:"Body"`
 	}{Body: out}
 
 	decoder := xml.NewDecoder(bytes.NewReader(xbuf.Bytes()))
